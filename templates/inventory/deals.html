@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Low Price Deals | {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<section class="mb-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Low Price Deals</h1>
+      <p class="text-sm text-slate-500">{{ paginator.count }} deal{{ paginator.count|pluralize }} starting at the best prices</p>
+    </div>
+  </div>
+</section>
+
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+  {% for laptop in laptops %}
+    {% include "inventory/_laptop_card.html" %}
+  {% empty %}
+    <div class="col-span-full rounded-2xl border-2 border-dashed border-slate-300 bg-white py-20 text-center">
+      <p class="text-lg font-semibold text-slate-700">No deals available right now.</p>
+    </div>
+  {% endfor %}
+</div>
+
+{% if is_paginated %}
+  <nav class="mt-10 flex items-center justify-between text-sm" aria-label="Pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="rounded-lg bg-white px-4 py-2 font-medium shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">&larr; Previous</a>
+    {% else %}<span></span>{% endif %}
+    <span class="text-slate-500">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="rounded-lg bg-white px-4 py-2 font-medium shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">Next &rarr;</a>
+    {% else %}<span></span>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Categories · {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  <div>
+    <h1 class="text-xl font-bold text-slate-900">Categories</h1>
+    <p class="text-sm text-slate-500">{{ paginator.count }} categor{{ paginator.count|pluralize:"y,ies" }}</p>
+  </div>
+  {% if can_add %}
+    <a href="{% url 'dashboard:category_add' %}" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Add category</a>
+  {% endif %}
+</div>
+
+<div class="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
+  <!-- Desktop table -->
+  <div class="hidden md:block">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500">Name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500">Slug</th>
+          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-500">Laptops</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500">Status</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {% for cat in categories %}
+        <tr class="group hover:bg-slate-50/50">
+          <td class="px-4 py-3 font-medium text-slate-900">{{ cat.name }}</td>
+          <td class="px-4 py-3 text-slate-500">{{ cat.slug }}</td>
+          <td class="px-4 py-3 text-center text-slate-700">{{ cat.laptop_count }}</td>
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium
+              {% if cat.is_active %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-600{% endif %}">
+              {% if cat.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{% url 'dashboard:category_edit' cat.slug %}" class="text-indigo-600 hover:text-indigo-800">Edit</a>
+            {% if can_delete %}
+              <form method="post" action="{% url 'dashboard:category_delete' cat.slug %}" class="inline-block ml-2">
+                {% csrf_token %}
+                <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('Delete this category? Its laptops stay listed without a category.')">Delete</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No categories yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile cards -->
+  <div class="md:hidden grid gap-3 p-3">
+    {% for cat in categories %}
+    <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold text-slate-900">{{ cat.name }}</h3>
+        <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium
+          {% if cat.is_active %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-600{% endif %}">
+          {% if cat.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">{{ cat.slug }} · {{ cat.laptop_count }} laptop{{ cat.laptop_count|pluralize }}</p>
+      <div class="flex gap-2">
+        <a href="{% url 'dashboard:category_edit' cat.slug %}" class="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white text-center hover:bg-indigo-500">Edit</a>
+        {% if can_delete %}
+          <form method="post" action="{% url 'dashboard:category_delete' cat.slug %}" class="flex-1">
+            {% csrf_token %}
+            <button type="submit" class="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 text-center" onclick="return confirm('Delete this category?')">Delete</button>
+          </form>
+        {% endif %}
+      </div>
+    </article>
+    {% empty %}
+    <p class="px-4 py-8 text-center text-sm text-slate-500">No categories yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% include "dashboard/_pagination.html" %}
+{% endblock %}

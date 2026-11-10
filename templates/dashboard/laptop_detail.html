@@ -1,0 +1,90 @@
+{% extends "dashboard/base.html" %}
+{% load humanize %}
+{% block title %}{{ laptop.title }} · {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<nav class="mb-6 flex items-center gap-2">
+  <a href="{% url 'dashboard:laptop_list' %}" class="text-sm text-indigo-600 hover:text-indigo-700">← Inventory</a>
+  <span class="text-xs text-slate-400">/</span>
+  {% if can_edit %}<a href="{% url 'dashboard:laptop_edit' laptop.slug %}" class="text-sm text-indigo-600 hover:text-indigo-700">Edit listing</a>{% endif %}
+</nav>
+
+<div class="grid gap-6 lg:grid-cols-2">
+  <section class="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
+    <div class="h-64 bg-slate-100 relative">
+      {% with cover=laptop.cover_image %}
+        {% if cover %}<img src="{{ cover.image.url }}" alt="{{ cover.alt_text|default:laptop.title }}" class="h-full w-full object-cover">
+        {% else %}<div class="h-full flex items-center justify-center text-slate-400 text-sm">No photo</div>{% endif %}
+      {% endwith %}
+    </div>
+    {% if laptop.images.all|length > 1 %}
+      <div class="grid grid-cols-4 gap-2 p-3 border-t border-slate-200">
+        {% for image in laptop.images.all %}
+        <div class="aspect-square bg-slate-100 rounded-lg overflow-hidden ring-1 ring-slate-200"><img src="{{ image.image.url }}" class="h-full w-full object-cover"></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="space-y-5">
+    <div class="flex flex-wrap items-baseline gap-x-3">
+      <span class="text-xs font-medium uppercase tracking-wide text-indigo-600">{{ laptop.brand }} · {{ laptop.category.name }}</span>
+      {% if laptop.is_featured %}<span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">Featured</span>{% endif %}
+      <span class="text-3xl font-bold text-slate-900">{{ CURRENCY }}{{ laptop.price|floatformat:0|intcomma }}</span>
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ laptop.title }}</h1>
+    <p class="text-sm text-slate-500">SKU {{ laptop.sku }} · {{ laptop.get_status_display }}</p>
+
+    <div class="grid grid-cols-2 gap-3">
+      {% if can_edit %}
+        <a href="{% url 'dashboard:laptop_edit' laptop.slug %}" class="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Edit listing</a>
+      {% endif %}
+      {% if can_delete %}
+        <form method="post" action="{% url 'dashboard:laptop_delete' laptop.slug %}" class="w-full">
+          {% csrf_token %}
+          <button type="submit" class="w-full rounded-lg bg-white px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 shadow-sm hover:bg-red-50" onclick="return confirm('Delete this listing?')">Delete listing</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <dl class="divide-y divide-slate-200 rounded-xl bg-white p-4 ring-1 ring-slate-200">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Category</dt><dd class="col-span-2 text-slate-700">{{ laptop.category.name }}</dd></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Brand / Model</dt><dd class="col-span-2 text-slate-700">{{ laptop.brand }} {{ laptop.model_name }}</dd></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Processor</dt><dd class="col-span-2 text-slate-700">{{ laptop.processor }}</dd></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">RAM</dt><dd class="col-span-2 text-slate-700">{{ laptop.ram_gb }} GB</dd></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Storage</dt><dd class="col-span-2 text-slate-700">{{ laptop.storage_label }}</dd></div>
+      {% if laptop.screen_size_in %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Screen</dt><dd class="col-span-2 text-slate-700">{{ laptop.screen_size_in }} inch</dd></div>{% endif %}
+      {% if laptop.gpu %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Graphics</dt><dd class="col-span-2 text-slate-700">{{ laptop.gpu }}</dd></div>{% endif %}
+      {% if laptop.operating_system %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">OS</dt><dd class="col-span-2 text-slate-700">{{ laptop.operating_system }}</dd></div>{% endif %}
+      {% if laptop.battery_health_pct is not None %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Battery health</dt><dd class="col-span-2 text-slate-700">{{ laptop.battery_health_pct }}%</dd></div>{% endif %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Condition</dt><dd class="col-span-2 text-slate-700">{{ laptop.get_condition_display }}</dd></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Warranty</dt><dd class="col-span-2 text-slate-700">{{ laptop.warranty_months }} months</dd></div>
+      {% if laptop.discount_pct %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Discount</dt><dd class="col-span-2 text-slate-700">{{ laptop.discount_pct }}% off</dd></div>{% endif %}
+      {% if laptop.description %}<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-3"><dt class="font-medium text-slate-500">Description</dt><dd class="col-span-2 text-slate-700 whitespace-pre-wrap">{{ laptop.description }}</dd></div>{% endif %}
+    </dl>
+  </section>
+</div>
+
+<section class="mt-8">
+  <h2 class="mb-3 text-lg font-bold text-slate-900">Inquiries about this laptop ({{ inquiries|length }})</h2>
+  <div class="space-y-3">
+    {% for inquiry in inquiries %}
+    <a href="{% url 'dashboard:inquiry_detail' inquiry.pk %}" class="block rounded-lg border border-slate-200 bg-white p-3 hover:bg-slate-50">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm font-semibold text-slate-900">{{ inquiry.name }}</div>
+          <div class="text-xs text-slate-500">{{ inquiry.phone }} · {{ inquiry.email }}</div>
+        </div>
+        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium
+          {% if inquiry.status == 'new' %}border-red-200 bg-red-50 text-red-700{% elif inquiry.status == 'contacted' or inquiry.status == 'negotiating' %}border-amber-200 bg-amber-50 text-amber-700{% elif inquiry.status == 'spam' %}border-slate-200 bg-slate-100 text-slate-500{% else %}border-slate-200 bg-slate-50 text-slate-600{% endif %}">
+          {{ inquiry.get_status_display }}
+        </span>
+      </div>
+      <p class="mt-1 text-xs text-slate-700 line-clamp-1">{{ inquiry.message|truncatechars:90 }}</p>
+    </a>
+    {% empty %}
+    <p class="text-sm text-slate-500">No inquiries yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

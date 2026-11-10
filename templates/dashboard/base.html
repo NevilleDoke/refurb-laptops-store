@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Admin · {{ STORE_NAME }}{% endblock %}</title>
+  {# Development only: Tailwind Play CDN. For production compile a static CSS file. #}
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-full text-slate-800 antialiased">
+  {% include "dashboard/_messages.html" %}
+
+  <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-3">
+        <a href="{% url 'inventory:laptop_list' %}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">← Storefront</a>
+        {% if request.user.is_staff %}
+          <a href="{% url 'dashboard:dashboard' %}" class="text-xs font-bold tracking-wider uppercase text-slate-400">Admin</a>
+        {% endif %}
+      </div>
+      <button id="menuBtn" class="md:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Open menu" aria-expanded="false" aria-controls="menuDrawer">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="menuBackdrop" class="fixed inset-0 z-40 hidden bg-black/40"></div>
+  <div id="menuDrawer" class="fixed inset-y-0 left-0 z-50 w-full sm:w-80 transform -translate-x-full transition-transform duration-300 bg-white border-r border-slate-200 sm:hidden">
+    <div class="flex items-center justify-between px-4 py-4 border-b border-slate-200">
+      <span class="font-bold text-indigo-600">{{ STORE_NAME }}</span>
+      <button id="menuClose" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Close menu">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="px-4 py-4 space-y-1">
+      <a href="{% url 'dashboard:dashboard' %}" class="block px-4 py-3 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Dashboard</a>
+      <a href="{% url 'dashboard:laptop_list' %}" class="block px-4 py-3 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'laptop_list' or request.resolver_match.url_name == 'laptop_add' or request.resolver_match.url_name == 'laptop_edit' or request.resolver_match.url_name == 'laptop_detail' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Inventory</a>
+      <a href="{% url 'dashboard:category_list' %}" class="block px-4 py-3 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'category_list' or request.resolver_match.url_name == 'category_add' or request.resolver_match.url_name == 'category_edit' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Categories</a>
+      <a href="{% url 'dashboard:inquiry_list' %}" class="block px-4 py-3 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'inquiry_list' or request.resolver_match.url_name == 'inquiry_detail' %}bg-indigo-50 text-indigo-700{% else %}text-slate-600 hover:bg-slate-50{% endif %}">Inquiries</a>
+      <form method="post" action="{% url 'dashboard:logout' %}" class="mt-6 border-t pt-4">
+        {% csrf_token %}
+        <button class="w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">Sign out</button>
+      </form>
+    </nav>
+    <div class="px-4 py-4 border-t text-xs text-slate-500">
+      <div class="font-medium text-slate-700">{{ request.user.get_full_name|default:request.user.username }}</div>
+      <div>Roles: {{ request.user.groups.all|join:", "|default:"none" }}</div>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="mt-8 border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+    &copy; {% now "Y" %} {{ STORE_NAME }}
+  </footer>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuBtn")
+      var close = document.getElementById("menuClose")
+      var drawer = document.getElementById("menuDrawer")
+      var backdrop = document.getElementById("menuBackdrop")
+      function openMenu() {
+        btn.setAttribute("aria-expanded", "true")
+        drawer.classList.remove("-translate-x-full")
+        backdrop.classList.remove("hidden")
+      }
+      function closeMenu() {
+        btn.setAttribute("aria-expanded", "false")
+        drawer.classList.add("-translate-x-full")
+        backdrop.classList.add("hidden")
+      }
+      btn.addEventListener("click", openMenu)
+      close.addEventListener("click", closeMenu)
+      backdrop.addEventListener("click", closeMenu)
+    })();
+  </script>
+</body>
+</html>

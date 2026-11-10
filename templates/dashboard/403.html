@@ -1,0 +1,14 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Not permitted · {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <div class="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200 text-center">
+    <h1 class="mb-2 text-xl font-bold text-slate-900">Not permitted</h1>
+    <p class="text-sm text-slate-500">Your staff account doesn't have permission for this action.</p>
+    <div class="mt-8 flex gap-3 justify-center">
+      <a href="{% url 'dashboard:dashboard' %}" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Back to dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

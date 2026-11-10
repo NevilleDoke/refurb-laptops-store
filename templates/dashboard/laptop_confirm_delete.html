@@ -1,0 +1,14 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Delete laptop · {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <h1 class="mb-6 text-xl font-bold text-slate-900">Delete listing?</h1>
+  <p class="mb-6 text-sm text-slate-700">Deleting <strong>{{ object.title }}</strong> ({{ object.sku }}) removes the listing and its photos. This cannot be undone.</p>
+  <form method="post" class="space-y-3">
+    {% csrf_token %}
+    <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Delete listing</button>
+    <a href="{% url 'dashboard:laptop_detail' object.slug %}" class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50">Cancel</a>
+  </form>
+</div>
+{% endblock %}

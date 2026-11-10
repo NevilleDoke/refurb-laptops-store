@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+media/
+static/
+staticfiles/
+# Environment
+.env
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+EOF
+
+**/migrations/
+
+runserver.err
+runserver.out

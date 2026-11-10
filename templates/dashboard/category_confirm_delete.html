@@ -1,0 +1,14 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Delete category · {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+  <h1 class="mb-6 text-xl font-bold text-slate-900">Delete category?</h1>
+  <p class="mb-6 text-sm text-slate-700">Deleting <strong>{{ object.name }}</strong> will not delete its laptops; they simply stop belonging to this category.</p>
+  <form method="post" class="space-y-3">
+    {% csrf_token %}
+    <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Delete category</button>
+    <a href="{% url 'dashboard:category_list' %}" class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50">Cancel</a>
+  </form>
+</div>
+{% endblock %}

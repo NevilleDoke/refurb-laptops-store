@@ -1,0 +1,105 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ title }} · {{ STORE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <h1 class="mb-6 text-xl font-bold text-slate-900">{{ title }}</h1>
+  <form method="post" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+    {% for field in form %}
+      {% if field.name == 'cover_image' or field.name == 'new_image' or field.name == 'is_featured' %}
+      {% else %}
+        {% if field.field.widget.input_type == 'checkbox' %}
+        <div class="flex items-start">
+          <div class="flex items-center h-5">{{ field }}</div>
+          <div class="ml-3">
+            <label for="{{ field.id_for_label }}" class="text-sm font-medium text-slate-700">{{ field.label }}</label>
+            {% if field.help_text %}<p class="text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div>
+          <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+      {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if form.non_field_errors %}
+      {% for error in form.non_field_errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+    {% endif %}
+
+    <!-- Cover photo -->
+    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+      <label class="block text-sm font-medium text-slate-700 mb-1">Cover photo</label>
+      <input type="file" name="cover_image" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-3 file:py-1.5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+      <p class="mt-1 text-xs text-slate-400">Optional photo for the listing. Camera/gallery opens on mobile.</p>
+      <div id="coverPreview" class="mt-3 rounded-lg bg-white border border-slate-200 hidden"></div>
+    </div>
+
+    <!-- Existing photos (edit) -->
+    {% if images %}
+    <div class="border-t pt-6">
+      <h3 class="mb-3 text-sm font-semibold text-slate-700">Existing photos</h3>
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {% for image in images %}
+        <div class="relative rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200 aspect-[4/3] group">
+          <img src="{{ image.image.url }}" class="h-full w-full object-cover group-hover:opacity-90">
+          <label class="absolute left-1 top-1 z-10">
+            <input type="checkbox" name="del_image_{{ image.id }}" class="sr-only peer">
+            <span class="block w-full h-full bg-black/60 peer-checked:bg-black/80 peer-checked:opacity-100 opacity-0 group-hover:opacity-50 transition flex items-center justify-center text-white text-xs font-bold">Remove</span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Tick photos to remove them when saving.</p>
+    </div>
+    {% endif %}
+
+    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+      <label class="block text-sm font-medium text-slate-700 mb-1">Add another photo</label>
+      <input type="file" name="new_image" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-3 file:py-1.5 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+      <div id="newImagePreview" class="mt-3 rounded-lg bg-white border border-slate-200 hidden"></div>
+    </div>
+
+    <div class="mt-10 flex gap-3">
+      <button type="submit" class="flex-1 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Save laptop</button>
+      <a href="{% if object %}{% url 'dashboard:laptop_detail' object.slug %}{% else %}{% url 'dashboard:laptop_list' %}{% endif %}" class="rounded-lg bg-white px-4 py-3 text-sm font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    var title = document.getElementById("id_name") || document.getElementById("id_title")
+    var slug = document.getElementById("id_slug")
+    if (title && slug) {
+      title.addEventListener("input", function () {
+        if (!slug.value) {
+          slug.value = title.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+        }
+      })
+    }
+
+    function preview(inputId, previewId) {
+      var input = document.getElementById(inputId)
+      var box = document.getElementById(previewId)
+      if (!input || !box) return
+      input.addEventListener("change", function () {
+        var file = this.files && this.files[0]
+        if (!file) { box.innerHTML = ""; box.classList.add("hidden"); return }
+        if (!file.type.match("image.*")) { alert("Please choose an image file."); this.value = ""; return }
+        var reader = new FileReader()
+        reader.onload = function (e) {
+          box.innerHTML = '<img src="' + e.target.result + '" class="h-24 w-24 rounded-lg object-cover">'
+          box.classList.remove("hidden")
+        }
+        reader.readAsDataURL(file)
+      })
+    }
+    preview("id_cover_image", "coverPreview")
+    preview("id_new_image", "newImagePreview")
+  })();
+</script>
+{% endblock %}
