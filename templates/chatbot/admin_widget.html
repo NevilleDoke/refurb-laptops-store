@@ -1,0 +1,203 @@
+<div id="ls-admin-chatbot" data-endpoint="{% url 'chatbot:admin_message' %}">
+  <style>
+    #ls-admin-chatbot * { box-sizing: border-box; }
+    #ls-admin-chatbot .ls-btn {
+      @apply inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-lg hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition;
+    }
+    #ls-admin-chatbot .ls-ghost {
+      @apply inline-flex items-center justify-center rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition;
+    }
+  </style>
+
+  <button id="ls-admin-bubble"
+          type="button"
+          class="fixed right-4 bottom-4 z-50 w-14 h-14 rounded-full bg-indigo-600 shadow-xl ring-2 ring-indigo-600/30 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-white"
+          aria-label="Open admin assistant"
+          aria-expanded="false"
+          aria-controls="ls-admin-panel">
+    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M12 12a3 3 0 100-6 3 3 0 000 6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-4-2-2-2-2-2-2-2V5z"/>
+    </svg>
+    <span id="ls-admin-dot" class="absolute right-1 bottom-1 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-md border-2 border-white"></span>
+    <span id="ls-admin-hint"
+          class="absolute -top-8 right-1/2 -translate-x-1/2 z-50 hidden whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-xs text-white shadow-lg pointer-events-none">
+      Admin assistant — type "help"
+    </span>
+  </button>
+
+  <div id="ls-admin-panel"
+       class="fixed right-4 bottom-20 z-50 w-full max-w-md hidden flex flex-col h-[460px] rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 transition-opacity duration-300"
+       aria-label="Admin assistant chat">
+    <div class="flex-shrink-0 rounded-t-2xl bg-indigo-600 px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-6 h-6 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold">A</div>
+        <div>
+          <div class="text-sm font-semibold text-white">Admin Assistant</div>
+          <div class="text-xs text-indigo-100">Staff commands: stats, inquiries, add</div>
+        </div>
+      </div>
+      <button id="ls-admin-close" type="button" class="w-7 h-7 rounded bg-white/10 text-white flex items-center justify-center hover:bg-white/20 focus:outline-none">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="ls-admin-messages"
+         class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50"
+         aria-live="polite">
+      {# injected by JS #}
+    </div>
+
+    <div class="flex-shrink-0 border-t border-slate-200 p-3 bg-white rounded-b-2xl">
+      <div class="flex gap-2">
+        <input id="ls-admin-input"
+               type="text"
+               placeholder="Type a command (e.g. stats, inquiries, add category)…"
+               class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none">
+        <button id="ls-admin-send" type="button" class="ls-btn">Send</button>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-1.5" id="ls-admin-chips">
+        <button type="button" class="ls-ghost" data-q="stats">Stats</button>
+        <button type="button" class="ls-ghost" data-q="new inquiries">New inquiries</button>
+        <button type="button" class="ls-ghost" data-q="add category">Add category</button>
+        <button type="button" class="ls-ghost" data-q="add laptop">Add laptop</button>
+        <button type="button" class="ls-ghost" data-q="help">Help</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.getElementById("ls-admin-chatbot");
+      var ENDPOINT = root.dataset.endpoint;
+      var bubble = document.getElementById("ls-admin-bubble");
+      var panel = document.getElementById("ls-admin-panel");
+      var closeBtn = document.getElementById("ls-admin-close");
+      var messages = document.getElementById("ls-admin-messages");
+      var input = document.getElementById("ls-admin-input");
+      var sendBtn = document.getElementById("ls-admin-send");
+      var chips = document.getElementById("ls-admin-chips");
+      var dot = document.getElementById("ls-admin-dot");
+      var hint = document.getElementById("ls-admin-hint");
+
+      var csrfToken = document.querySelector('meta[name="csrf-token"]');
+      csrfToken = csrfToken ? csrfToken.getAttribute("content") : "";
+      // Fall back to the csrftoken cookie (more reliable for AJAX).
+      if (!csrfToken) {
+        var cv = "; " + document.cookie;
+        var parts = cv.split("; " + "csrftoken" + "=");
+        if (parts.length === 2) {
+          csrfToken = parts.pop().split(";").shift();
+        }
+      }
+
+      var OPENED = false;
+      var SHOWN_KEY = "ls_admin_chatbot_shown";
+
+      function escapeHtml(text) {
+        var div = document.createElement("div");
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+      }
+
+      function scrollBottom() {
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function addUserMessage(text) {
+        var el = document.createElement("div");
+        el.className = "flex justify-end";
+        el.innerHTML =
+          '<div class="max-w-[80%] rounded-xl bg-indigo-600 px-3 py-2 text-xs text-white shadow-sm">' +
+          escapeHtml(text) + '</div>';
+        messages.appendChild(el);
+        scrollBottom();
+      }
+
+      function addBotMessage(html) {
+        var el = document.createElement("div");
+        el.className = "flex justify-start";
+        el.innerHTML =
+          '<div class="max-w-[80%] rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs text-slate-800 shadow-sm">' +
+          html + '</div>';
+        messages.appendChild(el);
+        scrollBottom();
+      }
+
+      function postWelcome() {
+        addBotMessage(
+          "Hi! I'm your admin assistant. Try: <code>stats</code>, <code>new inquiries</code>, " +
+          "<code>add category Gaming</code>, or <code>help</code> for all commands."
+        );
+      }
+
+      function openChat() {
+        if (OPENED) return;
+        panel.classList.remove("hidden");
+        bubble.classList.add("hidden");
+        OPENED = true;
+        dot.classList.remove("opacity-50", "animate-pulse");
+        hint.classList.add("hidden");
+        bubble.setAttribute("aria-expanded", "true");
+        sessionStorage.setItem(SHOWN_KEY, "1");
+        if (messages.children.length === 0) postWelcome();
+        scrollBottom();
+      }
+
+      function closeChat() {
+        panel.classList.add("hidden");
+        bubble.classList.remove("hidden");
+        OPENED = false;
+        dot.classList.remove("opacity-50", "animate-pulse");
+        hint.classList.add("hidden");
+        bubble.setAttribute("aria-expanded", "false");
+      }
+
+      async function sendMessage(text) {
+        if (!text) return;
+        addUserMessage(text);
+        input.value = "";
+
+        try {
+          var resp = await fetch(ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({ message: text }),
+            credentials: "same-origin",
+          });
+          var data = await resp.json();
+          if (data.error) {
+            addBotMessage("<span class=\"text-red-600\">" + escapeHtml(data.error) + "</span>");
+            return;
+          }
+          addBotMessage(data.reply || data.text || "Done.");
+        } catch (e) {
+          addBotMessage("<span class=\"text-red-600\">Sorry, I couldn't reach the assistant.</span>");
+        }
+      }
+
+      sendBtn.addEventListener("click", function () { sendMessage(input.value); });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); sendMessage(input.value); }
+      });
+
+      chips.addEventListener("click", function (e) {
+        var btn = e.target.closest("button");
+        if (!btn) return;
+        sendMessage(btn.getAttribute("data-q"));
+      });
+
+      bubble.addEventListener("click", function () { OPENED ? closeChat() : openChat(); });
+      closeBtn.addEventListener("click", closeChat);
+
+      if (!sessionStorage.getItem(SHOWN_KEY)) {
+        dot.classList.add("opacity-50", "animate-pulse");
+        hint.classList.remove("hidden");
+      }
+    })();
+  </script>
+</div>

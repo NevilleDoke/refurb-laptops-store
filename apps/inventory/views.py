@@ -27,6 +27,9 @@ class LaptopListView(ListView):
         ctx["filter_form"] = self.filter_form
         ctx["querystring"] = query.urlencode()  # keeps filters when paginating
         ctx["filters_active"] = any(v for k, v in query.items() if k != "sort")
+        # Auto-invite the chat bot when the shopper browses without searching,
+        # filtering or enquiring.
+        ctx["chatbot_auto_trigger"] = not ctx["filters_active"]
         ctx["brands"] = Brand.objects.filter(is_active=True).order_by("name")
         return ctx
 

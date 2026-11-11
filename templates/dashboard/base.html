@@ -6,6 +6,7 @@
   <title>{% block title %}Admin · {{ STORE_NAME }}{% endblock %}</title>
   {# Development only: Tailwind Play CDN. For production compile a static CSS file. #}
   <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="csrf-token" value="{{ csrf_token }}">
 </head>
 <body class="min-h-full text-slate-800 antialiased">
   {% include "dashboard/_messages.html" %}
@@ -77,5 +78,7 @@
       backdrop.addEventListener("click", closeMenu)
     })();
   </script>
+
+  {% block admin_chatbot %}{% include "chatbot/admin_widget.html" %}{% endblock %}
 </body>
 </html>

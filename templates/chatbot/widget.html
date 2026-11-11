@@ -1,0 +1,279 @@
+<div id="ls-chatbot" data-auto="{% if auto_trigger %}true{% else %}false{% endif %}"
+     data-session-key="{{ request.session.session_key|default:'' }}">
+  <style>
+    #ls-chatbot * { box-sizing: border-box; }
+    #ls-chatbot .ls-btn {
+      @apply inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-lg hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition;
+    }
+    #ls-chatbot .ls-ghost {
+      @apply inline-flex items-center justify-center rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition;
+    }
+  </style>
+
+  {# Toggle bubble (closed state) #}
+  <button id="ls-bubble"
+          type="button"
+          class="fixed right-4 bottom-4 z-50 w-14 h-14 rounded-full bg-indigo-600 shadow-xl ring-2 ring-indigo-600/30 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-white"
+          aria-label="Open laptop assistant"
+          aria-expanded="false"
+          aria-controls="ls-panel">
+    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M12 12a3 3 0 100-6 3 3 0 000 6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-4-2-2-2-2-2-2-2V5z"/>
+    </svg>
+    <span id="ls-dot" class="absolute right-1 bottom-1 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-md border-2 border-white"></span>
+    <span id="ls-hint"
+          class="absolute -top-8 right-1/2 -translate-x-1/2 z-50 hidden whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-xs text-white shadow-lg pointer-events-none">
+      Need help finding a laptop?
+    </span>
+  </button>
+
+  {# Chat panel (open state) #}
+  <div id="ls-panel"
+       class="fixed right-4 bottom-20 z-50 w-full max-w-md hidden flex flex-col h-[420px] rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 transition-opacity duration-300"
+       aria-label="Laptop assistant chat">
+    <div class="flex-shrink-0 rounded-t-2xl bg-indigo-600 px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-6 h-6 rounded-full bg-white flex items-center justify-center text-indigo-600 text-xs font-bold">AI</div>
+        <div>
+          <div class="text-sm font-semibold text-white">Laptop Assistant</div>
+          <div class="text-xs text-indigo-100">Ask about refurbished laptops</div>
+        </div>
+      </div>
+      <button id="ls-close" type="button" class="w-7 h-7 rounded bg-white/10 text-white flex items-center justify-center hover:bg-white/20 focus:outline-none">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="ls-messages"
+         class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50"
+         aria-live="polite">
+      {# messages injected by JS #}
+    </div>
+
+    <div class="flex-shrink-0 border-t border-slate-200 p-3 bg-white rounded-b-2xl">
+      <div class="flex gap-2">
+        <input id="ls-input"
+               type="text"
+               placeholder="What laptop are you looking for?…"
+               class="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none">
+        <button id="ls-send" type="button" class="ls-btn">Send</button>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-1.5" id="ls-chips">
+        <button type="button" class="ls-ghost" data-q="gaming laptop under 50000">Gaming under ₹50000</button>
+        <button type="button" class="ls-ghost" data-q="office laptop 8gb ram">Office 8 GB RAM</button>
+        <button type="button" class="ls-ghost" data-q="student laptop under 30000">Student under ₹30000</button>
+        <button type="button" class="ls-ghost" data-q="apple macbook">Apple MacBook</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.getElementById("ls-chatbot");
+      var AUTO = root.dataset.auto === "true";
+      var SESSION_KEY = root.dataset.sessionKey || "";
+
+      var bubble = document.getElementById("ls-bubble");
+      var panel = document.getElementById("ls-panel");
+      var closeBtn = document.getElementById("ls-close");
+      var messages = document.getElementById("ls-messages");
+      var input = document.getElementById("ls-input");
+      var sendBtn = document.getElementById("ls-send");
+      var chips = document.getElementById("ls-chips");
+      var dot = document.getElementById("ls-dot");
+      var hint = document.getElementById("ls-hint");
+
+      var csrfToken = document.querySelector('meta[name="csrf-token"]');
+      csrfToken = csrfToken ? csrfToken.getAttribute("content") : "";
+
+      var ENDPOINT = "/chatbot/message/";
+      var OPENED = false;
+      var DWELL_MS = 15000; // open after ~15s of browsing without search/filter/enquiry
+      var SHOWN_KEY = "ls_chatbot_shown";
+
+      function escapeHtml(text) {
+        var div = document.createElement("div");
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+      }
+
+      function scrollBottom() {
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function addUserMessage(text) {
+        var el = document.createElement("div");
+        el.className = "flex justify-end";
+        el.innerHTML =
+          '<div class="max-w-[80%] rounded-xl bg-indigo-600 px-3 py-2 text-xs text-white shadow-sm">' +
+          escapeHtml(text) + '</div>';
+        messages.appendChild(el);
+        scrollBottom();
+      }
+
+      function addBotMessage(text) {
+        var el = document.createElement("div");
+        el.className = "flex justify-start";
+        el.innerHTML =
+          '<div class="max-w-[80%] rounded-xl bg-white border border-slate-200 px-3 py-2 text-xs text-slate-800 shadow-sm">' +
+          text + '</div>';
+        messages.appendChild(el);
+        scrollBottom();
+      }
+
+      function addLaptopCards(matches) {
+        if (!matches || !matches.length) return;
+        var wrapper = document.createElement("div");
+        wrapper.className = "flex justify-start";
+        var inner = document.createElement("div");
+        inner.className = "grid grid-cols-1 gap-2";
+        matches.forEach(function (m) {
+          var imgHtml = m.image
+            ? '<img src="' + escapeHtml(m.image) + '" alt="" class="h-16 w-24 object-cover bg-slate-100">'
+            : '<div class="h-16 w-24 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">no photo</div>';
+          inner.insertAdjacentHTML("beforeend",
+            '<a href="' + escapeHtml(m.url) + '" class="flex gap-2 p-2 items-start group" style="text-decoration:none; color:inherit;">' +
+            imgHtml +
+            '<div class="flex-1 min-w-0">' +
+            '<div class="text-sm font-semibold text-slate-900 leading-tight group-hover:text-indigo-600">' + escapeHtml(m.title) + '</div>' +
+            '<div class="mt-0.5 text-xs text-slate-500">' + escapeHtml(m.brand) + ' \u2022 \u20B9' + escapeHtml(m.price) + '</div>' +
+            '<div class="mt-1.5 text-[10px] text-indigo-600 font-medium">View details \u2192</div>' +
+            '</div>' +
+            '</a>' +
+            '<a href="' + escapeHtml(m.inquiry_url) + '" class="block px-2 py-1.5 text-[10px] font-semibold text-slate-600 border-t border-slate-100 text-center hover:bg-slate-50">Enquire</a>'
+          );
+        });
+        wrapper.appendChild(inner);
+        messages.appendChild(wrapper);
+        scrollBottom();
+      }
+
+      function postBot(text, matches) {
+        addBotMessage(text);
+        if (matches) addLaptopCards(matches);
+      }
+
+      function postWelcome() {
+        postBot(
+          "Hi! I\u2019m your laptop assistant. What are you looking for?<br>" +
+          '<span class="block mt-1.5 text-[10px] text-slate-500">Try: "gaming laptop under \u20B950000", "8 GB RAM Dell for office", "student laptop under \u20B930000"</span>'
+        );
+      }
+
+      function openChat() {
+        if (OPENED) return;
+        panel.classList.remove("hidden");
+        bubble.classList.add("hidden");
+        OPENED = true;
+        dot.classList.remove("opacity-50", "animate-pulse");
+        hint.classList.add("hidden");
+        bubble.setAttribute("aria-expanded", "true");
+        sessionStorage.setItem(SHOWN_KEY, "1");
+        if (messages.children.length === 0) postWelcome();
+        scrollBottom();
+      }
+
+      function closeChat() {
+        panel.classList.add("hidden");
+        bubble.classList.remove("hidden");
+        OPENED = false;
+        dot.classList.remove("opacity-50", "animate-pulse");
+        hint.classList.add("hidden");
+        bubble.setAttribute("aria-expanded", "false");
+      }
+
+      function showInvite() {
+        dot.classList.add("opacity-50", "animate-pulse");
+        hint.classList.remove("hidden");
+      }
+
+      function hideInvite() {
+        dot.classList.remove("opacity-50", "animate-pulse");
+        hint.classList.add("hidden");
+      }
+
+      async function sendMessage(text) {
+        if (!text) return;
+        addUserMessage(text);
+        input.value = "";
+        hideInvite();
+
+        try {
+          var body = { message: text, session_key: SESSION_KEY };
+          var resp = await fetch(ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify(body),
+            credentials: "same-origin",
+          });
+          var data = await resp.json();
+          if (data.session_key) SESSION_KEY = data.session_key;
+          if (data.error) {
+            postBot("Sorry, I ran into an issue. Please try again or send an enquiry.");
+            return;
+          }
+          postBot(data.reply, data.matches || []);
+        } catch (e) {
+          postBot("Sorry, I couldn't reach the assistant. Please try again later.");
+        }
+      }
+
+      sendBtn.addEventListener("click", function () {
+        sendMessage(input.value);
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          sendMessage(input.value);
+        }
+      });
+
+      chips.addEventListener("click", function (e) {
+        var btn = e.target.closest("button");
+        if (!btn) return;
+        sendMessage(btn.getAttribute("data-q"));
+      });
+
+      bubble.addEventListener("click", function () {
+        if (OPENED) closeChat(); else openChat();
+      });
+      closeBtn.addEventListener("click", closeChat);
+
+      if (AUTO && !sessionStorage.getItem(SHOWN_KEY)) {
+        var hasInteracted = false;
+        var busySelectors = 'input[name="q"], select, .ls-btn, .ls-ghost, a[href*="#inquiry"], button[type="submit"]';
+
+        function noteInteraction(ev) {
+          if (ev && ev.target && ev.target.closest('input[name="q"], form')) {
+            hasInteracted = true;
+          }
+          if (ev && ev.target && ev.target.closest(busySelectors)) {
+            hasInteracted = true;
+          }
+        }
+
+        function maybeOpenByDwell() {
+          if (sessionStorage.getItem(SHOWN_KEY) || hasInteracted || OPENED) return;
+          if (!sessionStorage.getItem("ls_chatbot_start")) {
+            sessionStorage.setItem("ls_chatbot_start", String(Date.now()));
+          }
+          var dwell = Date.now() - parseInt(sessionStorage.getItem("ls_chatbot_start") || "0", 10);
+          if (dwell >= DWELL_MS) {
+            openChat();
+          } else {
+            setTimeout(maybeOpenByDwell, 1000);
+          }
+        }
+
+        document.addEventListener("keydown", noteInteraction, true);
+        document.addEventListener("click", noteInteraction, true);
+        maybeOpenByDwell();
+      }
+    })();
+  </script>
+</div>

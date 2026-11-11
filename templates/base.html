@@ -6,6 +6,7 @@
   <title>{% block title %}{{ STORE_NAME }}{% endblock %}</title>
   {# Development only: Tailwind Play CDN. For production compile a static CSS file (see README). #}
   <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="csrf-token" value="{{ csrf_token }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -238,5 +239,7 @@
       backdrop.addEventListener("click", closeMenu)
     })();
   </script>
+
+  {% block chatbot_widget %}{% endblock %}
 </body>
 </html>

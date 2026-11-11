@@ -6,9 +6,11 @@ import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
 
 def env(name, default=None):
     return os.environ.get(name, default)
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     "apps.inventory",
     "apps.inquiries",
     "apps.dashboard",
+    "apps.chatbot",
 ]
 
 LOGIN_URL = "dashboard:login"
@@ -80,11 +83,11 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME", "laptop_store"),
-        "USER": env("DB_USER", "postgres"),
-        "PASSWORD": env("DB_PASSWORD", "root"),
-        "HOST": env("DB_HOST", "localhost"),
-        "PORT": env("DB_PORT", "5432"),
+        "NAME": os.getenv("DB_NAME", ""),
+        "USER": os.getenv("DB_USER", ""),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", ""),
+        "PORT": os.getenv("DB_PORT", ""),
         "CONN_MAX_AGE": 60,
     }
 }

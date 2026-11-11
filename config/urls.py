@@ -11,6 +11,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("staff/", include("apps.dashboard.urls")),
     path("inquiries/", include("apps.inquiries.urls")),
+    path("chatbot/", include("apps.chatbot.urls")),
     path("", include("apps.inventory.urls")),
 ]
 

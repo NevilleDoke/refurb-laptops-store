@@ -117,3 +117,7 @@
   })();
 </script>
 {% endblock %}
+
+{% block chatbot_widget %}
+  {% include "chatbot/widget.html" with auto_trigger=chatbot_auto_trigger %}
+{% endblock %}
