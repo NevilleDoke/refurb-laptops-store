@@ -69,6 +69,9 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                # Populates {{ csrf_token }} and ensures the csrftoken cookie is
+                # set so AJAX endpoints (e.g. the chatbot) can send a valid token.
+                "django.template.context_processors.csrf",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.store",

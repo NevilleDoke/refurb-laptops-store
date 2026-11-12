@@ -87,6 +87,14 @@
 
       var csrfToken = document.querySelector('meta[name="csrf-token"]');
       csrfToken = csrfToken ? csrfToken.getAttribute("content") : "";
+      // Fall back to the csrftoken cookie (more reliable for AJAX).
+      if (!csrfToken) {
+        var cv = "; " + document.cookie;
+        var parts = cv.split("; " + "csrftoken" + "=");
+        if (parts.length === 2) {
+          csrfToken = parts.pop().split(";").shift();
+        }
+      }
 
       var ENDPOINT = "/chatbot/message/";
       var OPENED = false;
